@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Simple scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="loader" class="loader"></div>
+
+    <div id="app-content" class="container mx-auto max-w-2xl p-4 sm:p-6 opacity-0 transition-opacity duration-500">
+        
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">Expense Tracker</h1>
+            <p class="text-gray-500 mt-1">Track your daily spending with ease.</p>
+        </header>
+
+        <!-- Summary Cards -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+            <div class="bg-white p-6 rounded-2xl shadow-md flex flex-col justify-center items-center">
+                <h2 class="text-sm font-medium text-gray-500">Total Expense</h2>
+                <p id="total-expense" class="text-3xl font-bold text-red-500 mt-1">$0.00</p>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-md flex flex-col justify-center items-center">
+                <h2 class="text-sm font-medium text-gray-500">This Month</h2>
+                <p id="monthly-expense" class="text-3xl font-bold text-blue-500 mt-1">$0.00</p>
+            </div>
+        </section>
+
+        <!-- Add Expense Form -->
+        <section class="bg-white p-6 rounded-2xl shadow-md mb-8">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">Add New Expense</h2>
+            <form id="expense-form" class="space-y-4">
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-600 mb-1">Description</label>
+                    <input type="text" id="description" placeholder="e.g., Groceries" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" required>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label for="amount" class="block text-sm font-medium text-gray-600 mb-1">Amount ($)</label>
+                        <input type="number" id="amount" placeholder="50.00" min="0.01" step="0.01" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" required>
+                    </div>
+                    <div>
+                        <label for="date" class="block text-sm font-medium text-gray-600 mb-1">Date</label>
+                        <input type="date" id="date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" required>
+                    </div>
+                    <div>
+                        <label for="payment-method" class="block text-sm font-medium text-gray-600 mb-1">Payment</label>
+                        <select id="payment-method" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white" required>
+                            <option value="UPI">UPI</option>
+                            <option value="Cash">Cash</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105">
+                    Add Expense
+                </button>
+            </form>
+        </section>
+
+        <!-- Expense List -->
+        <section>
+             <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+                <h2 class="text-xl font-semibold text-gray-800">Expense History</h2>
+                <div class="flex gap-2 w-full sm:w-auto flex-wrap">
+                    <!-- Hidden Import Input -->
+                    <input type="file" id="import-input" accept=".csv" class="hidden">
+                    
+                    <button id="import-btn" class="flex-1 sm:flex-none bg-blue-100 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-200 transition text-sm font-medium flex items-center justify-center gap-2">
+                        <!-- Icon swapped: Arrow pointing DOWN (Into the app) -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Import
+                    </button>
+                    
+                    <button id="export-btn" class="flex-1 sm:flex-none bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm font-medium flex items-center justify-center gap-2">
+                        <!-- Icon swapped: Arrow pointing UP (Out of the app) -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        Export
+                    </button>
+                    
+                    <select id="month-filter" class="flex-1 sm:flex-none w-full sm:w-48 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white text-sm">
+                        <option value="all">All Months</option>
+                    </select>
+                </div>
+            </div>
+            <div id="expense-list" class="space-y-3">
+                <p id="no-expenses-message" class="text-center text-gray-500 bg-white p-6 rounded-2xl shadow-md">No expenses added yet. Add one above to get started!</p>
+            </div>
+        </section>
+        
+        <!-- User ID display -->
+        <footer class="text-center mt-8">
+            <p class="text-xs text-gray-400">Your User ID: <span id="user-id" class="font-mono"></span></p>
+        </footer>
+
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- DOM Elements ---
+        const totalExpenseEl = document.getElementById('total-expense');
+        const monthlyExpenseEl = document.getElementById('monthly-expense');
+        const expenseForm = document.getElementById('expense-form');
+        const descriptionInput = document.getElementById('description');
+        const amountInput = document.getElementById('amount');
+        const dateInput = document.getElementById('date');
+        const paymentMethodInput = document.getElementById('payment-method');
+        const expenseListEl = document.getElementById('expense-list');
+        const noExpensesMessage = document.getElementById('no-expenses-message');
+        const loader = document.getElementById('loader');
+        const appContent = document.getElementById('app-content');
+        const userIdEl = document.getElementById('user-id');
+        const monthFilterEl = document.getElementById('month-filter');
+        const exportBtn = document.getElementById('export-btn');
+        const importBtn = document.getElementById('import-btn');
+        const importInput = document.getElementById('import-input');
+        
+        let db, auth;
+        let expenses = [];
+        let unsubscribe; // To store the onSnapshot listener
+        let currentUserId;
+
+        // --- Firebase Initialization and Auth ---
+        async function initializeFirebase() {
+            try {
+                // PASTE YOUR FIREBASE CONFIG OBJECT HERE
+                const firebaseConfig = {
+                    apiKey: "AIzaSyDjqlg5pmFPCrW3IW3VeVq_4nmpB6SoaCM",
+                    authDomain: "expense-tracker-8cc08.firebaseapp.com",
+                    databaseURL: "https://expense-tracker-8cc08-default-rtdb.firebaseio.com",
+                    projectId: "expense-tracker-8cc08",
+                    storageBucket: "expense-tracker-8cc08.firebasestorage.app",
+                    messagingSenderId: "877398025827",
+                    appId: "1:877398025827:web:ffa332aee25764bc71ba56",
+                    measurementId: "G-MTZXWNG71X"
+                };       
+                
+                if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY") {
+                    console.error("Firebase config is missing or incomplete. Please paste your config object.");
+                    showError("Could not connect to the database. Please paste your Firebase config into the code.");
+                    return;
+                }
+
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                await setPersistence(auth, browserLocalPersistence);
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        currentUserId = user.uid;
+                        userIdEl.textContent = currentUserId;
+                        fetchExpenses();
+                    } else {
+                        // If no user, sign in anonymously
+                        try {
+                            await signInAnonymously(auth);
+                        } catch (error) {
+                            console.error("Anonymous Authentication Error:", error);
+                            showError("Authentication failed. Please refresh the page.");
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase Initialization Error:", error);
+                showError("Failed to initialize the application.");
+            }
+        }
+        
+        // --- Data Fetching ---
+        function fetchExpenses() {
+            if (!currentUserId) return;
+            
+            const expensesCollectionPath = `users/${currentUserId}/expenses`;
+            const q = query(collection(db, expensesCollectionPath));
+
+            if (unsubscribe) {
+                unsubscribe(); // Detach previous listener if exists
+            }
+
+            unsubscribe = onSnapshot(q, (snapshot) => {
+                expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                // Sort expenses by date, newest first
+                expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
+                
+                renderUI();
+                hideLoader();
+            }, (error) => {
+                console.error("Error fetching expenses: ", error);
+                showError("Could not load your expenses. Please check your Firestore security rules.");
+                hideLoader();
+            });
+        }
+        
+        // --- UI Rendering ---
+        function renderUI() {
+            populateMonthFilter();
+            renderExpenseList();
+            calculateTotals();
+        }
+
+        function exportToCSV() {
+            const selectedMonth = monthFilterEl.value;
+            let dataToExport = expenses;
+
+            // Apply the current filter to the export
+            if (selectedMonth !== 'all') {
+                dataToExport = expenses.filter(exp => exp.date.startsWith(selectedMonth));
+            }
+
+            if (dataToExport.length === 0) {
+                alert("No expenses found to export.");
+                return;
+            }
+
+            // Define columns
+            const headers = ["Date", "Description", "Amount", "Payment Method"];
+            
+            // Map data to rows
+            const rows = dataToExport.map(exp => [
+                exp.date,
+                `"${exp.description.replace(/"/g, '""')}"`, // Escape quotes for CSV safety
+                exp.amount,
+                exp.paymentMethod
+            ]);
+
+            // Combine headers and rows
+            const csvContent = [
+                headers.join(","),
+                ...rows.map(row => row.join(","))
+            ].join("\n");
+
+            // Create download link
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `expenses_export_${selectedMonth === 'all' ? 'all' : selectedMonth}_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function handleImportClick() {
+            importInput.click();
+        }
+
+        async function handleFileImport(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(event) {
+                const text = event.target.result;
+                const rows = text.split("\n");
+                
+                // Remove header row if it exists and looks like a header
+                if (rows.length > 0 && rows[0].toLowerCase().includes("date") && rows[0].toLowerCase().includes("amount")) {
+                    rows.shift();
+                }
+
+                const expensesCollectionPath = `users/${currentUserId}/expenses`;
+                const batch = writeBatch(db); // Use batch for efficiency
+                let count = 0;
+                
+                // Helper to parse CSV line correctly handling quotes
+                const parseCSVLine = (line) => {
+                    const result = [];
+                    let current = '';
+                    let inQuotes = false;
+                    for (let i = 0; i < line.length; i++) {
+                        const char = line[i];
+                        if (char === '"') {
+                            if (inQuotes && line[i+1] === '"') {
+                                current += '"'; // Handle escaped quote
+                                i++;
+                            } else {
+                                inQuotes = !inQuotes;
+                            }
+                        } else if (char === ',' && !inQuotes) {
+                            result.push(current);
+                            current = '';
+                        } else {
+                            current += char;
+                        }
+                    }
+                    result.push(current);
+                    return result;
+                };
+
+                for (const row of rows) {
+                    if (!row.trim()) continue;
+
+                    try {
+                        // Expected format: Date, Description, Amount, PaymentMethod
+                        const cols = parseCSVLine(row);
+                        
+                        if (cols.length >= 3) {
+                            const date = cols[0].trim();
+                            // Clean description (remove surrounding quotes if simple parsing left them)
+                            let description = cols[1].trim(); 
+                            const amount = parseFloat(cols[2].trim());
+                            const paymentMethod = cols[3] ? cols[3].trim() : 'Cash'; // Default to Cash
+
+                            if (date && description && !isNaN(amount)) {
+                                const newDocRef = doc(collection(db, expensesCollectionPath));
+                                batch.set(newDocRef, {
+                                    date,
+                                    description,
+                                    amount,
+                                    paymentMethod,
+                                    createdAt: new Date()
+                                });
+                                count++;
+                            }
+                        }
+                    } catch (err) {
+                        console.warn("Skipping invalid row:", row, err);
+                    }
+                }
+
+                if (count > 0) {
+                    try {
+                        loader.style.display = 'block';
+                        await batch.commit();
+                        alert(`Successfully imported ${count} expenses!`);
+                    } catch (error) {
+                        console.error("Batch commit failed", error);
+                        alert("Error saving imported expenses to database.");
+                    } finally {
+                        loader.style.display = 'none';
+                    }
+                } else {
+                    alert("No valid expenses found in file.");
+                }
+                
+                // Reset input so same file can be selected again if needed
+                importInput.value = ''; 
+            };
+            
+            reader.readAsText(file);
+        }
+
+        function populateMonthFilter() {
+            const currentFilterValue = monthFilterEl.value;
+            const months = [...new Set(expenses.map(exp => exp.date.substring(0, 7)))]; // Get unique YYYY-MM
+            
+            monthFilterEl.innerHTML = '<option value="all">All Months</option>'; // Reset
+
+            months.forEach(month => {
+                const option = document.createElement('option');
+                option.value = month;
+                const [year, monthNum] = month.split('-');
+                const monthName = new Date(year, monthNum - 1).toLocaleString('default', { month: 'long' });
+                option.textContent = `${monthName} ${year}`;
+                monthFilterEl.appendChild(option);
+            });
+            
+            // Restore previous selection if it still exists
+            if (months.includes(currentFilterValue)) {
+                monthFilterEl.value = currentFilterValue;
+            }
+        }
+
+        function renderExpenseList() {
+            const selectedMonth = monthFilterEl.value;
+            let filteredExpenses = expenses;
+
+            if (selectedMonth !== 'all') {
+                filteredExpenses = expenses.filter(exp => exp.date.startsWith(selectedMonth));
+            }
+
+            expenseListEl.innerHTML = ''; // Clear current list
+
+            if (filteredExpenses.length === 0) {
+                 if (expenses.length > 0) {
+                     // If there are expenses, but not for this month
+                     const noResultsMessage = document.createElement('p');
+                     noResultsMessage.className = 'text-center text-gray-500 bg-white p-6 rounded-2xl shadow-md';
+                     noResultsMessage.textContent = 'No expenses found for the selected month.';
+                     expenseListEl.appendChild(noResultsMessage);
+                 } else {
+                    // If there are no expenses at all
+                    expenseListEl.appendChild(noExpensesMessage);
+                    noExpensesMessage.style.display = 'block';
+                 }
+            } else {
+                noExpensesMessage.style.display = 'none';
+                filteredExpenses.forEach(expense => {
+                    const expenseItem = document.createElement('div');
+                    expenseItem.className = 'bg-white p-4 rounded-xl shadow-sm flex items-center justify-between transition-transform transform hover:scale-[1.02]';
+                    
+                    const date = new Date(expense.date + 'T00:00:00');
+                    const formattedDate = date.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+                    const paymentMethod = expense.paymentMethod || 'Cash'; // Default to cash if not set
+                    const iconBgColor = paymentMethod === 'UPI' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-700';
+                    const paymentIcon = paymentMethod === 'UPI' 
+                        ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>`
+                        : `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><circle cx="12" cy="12" r="4"></circle></svg>`;
+
+                    expenseItem.innerHTML = `
+                        <div class="flex items-center gap-4">
+                           <div class="flex-shrink-0 rounded-full h-10 w-10 flex items-center justify-center ${iconBgColor}">
+                                ${paymentIcon}
+                           </div>
+                            <div>
+                                <p class="font-semibold text-gray-800">${expense.description}</p>
+                                <p class="text-sm text-gray-500">${formattedDate}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                             <p class="font-bold text-red-500 text-lg">-$${parseFloat(expense.amount).toFixed(2)}</p>
+                             <button data-id="${expense.id}" class="delete-btn text-gray-400 hover:text-red-600 transition-colors p-2 rounded-full hover:bg-red-50">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            </button>
+                        </div>
+                    `;
+                    expenseListEl.appendChild(expenseItem);
+                });
+            }
+        }
+
+        function calculateTotals() {
+            // Total expense is always the grand total, regardless of filter
+            const total = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+            totalExpenseEl.textContent = `$${total.toFixed(2)}`;
+
+            const now = new Date();
+            const currentMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+            const monthlyTotal = expenses
+                .filter(exp => exp.date.startsWith(currentMonth))
+                .reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+            
+            monthlyExpenseEl.textContent = `$${monthlyTotal.toFixed(2)}`;
+        }
+
+        // --- Event Handlers ---
+        async function handleAddExpense(e) {
+            e.preventDefault();
+            const description = descriptionInput.value.trim();
+            const amount = parseFloat(amountInput.value);
+            const date = dateInput.value;
+            const paymentMethod = paymentMethodInput.value;
+
+            if (!description || isNaN(amount) || amount <= 0 || !date || !paymentMethod) {
+                console.error('Validation failed: Please fill out all fields with valid data.');
+                return;
+            }
+
+            try {
+                const expensesCollectionPath = `users/${currentUserId}/expenses`;
+                await addDoc(collection(db, expensesCollectionPath), {
+                    description,
+                    amount,
+                    date,
+                    paymentMethod,
+                    createdAt: new Date()
+                });
+                expenseForm.reset();
+                setDefaultDate();
+            } catch (error) {
+                console.error("Error adding expense: ", error);
+                showError("Failed to add expense. Please try again.");
+            }
+        }
+        
+        async function handleDeleteExpense(e) {
+            if (e.target.closest('.delete-btn')) {
+                const id = e.target.closest('.delete-btn').dataset.id;
+                try {
+                    const expenseDocPath = `users/${currentUserId}/expenses/${id}`;
+                    await deleteDoc(doc(db, expenseDocPath));
+                } catch (error) {
+                    console.error("Error deleting expense: ", error);
+                    showError("Failed to delete expense.");
+                }
+            }
+        }
+
+        // --- Utility Functions ---
+        function setDefaultDate() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            dateInput.value = `${year}-${month}-${day}`;
+        }
+        
+        function hideLoader() {
+            loader.style.display = 'none';
+            appContent.classList.remove('opacity-0');
+        }
+
+        function showError(message) {
+            appContent.innerHTML = `<div class="text-center bg-red-100 text-red-700 p-4 rounded-lg">${message}</div>`;
+            hideLoader();
+        }
+
+        // --- Initial Setup ---
+        document.addEventListener('DOMContentLoaded', () => {
+            setDefaultDate();
+            initializeFirebase();
+            expenseForm.addEventListener('submit', handleAddExpense);
+            expenseListEl.addEventListener('click', handleDeleteExpense);
+            monthFilterEl.addEventListener('change', renderExpenseList);
+            exportBtn.addEventListener('click', exportToCSV);
+            importBtn.addEventListener('click', handleImportClick);
+            importInput.addEventListener('change', handleFileImport);
+        });
+
+    </script>
+</body>
+</html>
